@@ -23,7 +23,7 @@ class BackyardFlyer(Drone):
     def __init__(self, connection):
         super().__init__(connection)
         self.target_position = np.array([0.0, 0.0, 0.0])
-        self.all_waypoints = []
+        self.all_waypoints = self.calculate_box()
         self.in_mission = True
         self.check_state = {}
 
@@ -64,7 +64,9 @@ class BackyardFlyer(Drone):
         
         1. Return waypoints to fly a box
         """
-        pass
+
+        return [[10.0, 0.0, 3.0],[10.0, 10.0, 3.0],[0.0, 10.0, 3.0],[0.0, 0.0, 3.0]]
+        
 
     def arming_transition(self):
         """TODO: Fill out this method
@@ -74,7 +76,15 @@ class BackyardFlyer(Drone):
         3. Set the home location to current position
         4. Transition to the ARMING state
         """
+
         print("arming transition")
+        self.take_control()
+        self.arm()
+        self.set_home_position(self.global_position[0],
+                               self.global_position[1],
+                               self.global_position[2])
+
+        self.flight_state = States.ARMING        
 
     def takeoff_transition(self):
         """TODO: Fill out this method
@@ -83,7 +93,12 @@ class BackyardFlyer(Drone):
         2. Command a takeoff to 3.0m
         3. Transition to the TAKEOFF state
         """
+
         print("takeoff transition")
+        alt = 3.0
+        self.target_position[2] = alt
+        self.takeoff(alt)
+        self.flight_state = States.TAKEOFF        
 
     def waypoint_transition(self):
         """TODO: Fill out this method
@@ -100,6 +115,8 @@ class BackyardFlyer(Drone):
         2. Transition to the LANDING state
         """
         print("landing transition")
+        self.land()
+        self.flight_state = States.LANDING
 
     def disarming_transition(self):
         """TODO: Fill out this method
@@ -108,6 +125,8 @@ class BackyardFlyer(Drone):
         2. Transition to the DISARMING state
         """
         print("disarm transition")
+        self.disarm()
+        self.flight_state = States.DISARMING
 
     def manual_transition(self):
         """This method is provided
