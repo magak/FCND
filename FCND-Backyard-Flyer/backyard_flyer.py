@@ -8,6 +8,7 @@ from udacidrone import Drone
 from udacidrone.connection import MavlinkConnection, WebSocketConnection  # noqa: F401
 from udacidrone.messaging import MsgID
 
+POSTION_DELTA = 0.2
 
 class States(Enum):
     MANUAL = 0
@@ -18,12 +19,14 @@ class States(Enum):
     DISARMING = 5
 
 
-class BackyardFlyer(Drone):
+class BackyardFlyer(Drone):    
 
     def __init__(self, connection):
         super().__init__(connection)
         self.target_position = np.array([0.0, 0.0, 0.0])
+        self.next_waypoint = None
         self.all_waypoints = self.calculate_box()
+        self.all_waypoints.reverse()
         self.in_mission = True
         self.check_state = {}
 
@@ -41,7 +44,24 @@ class BackyardFlyer(Drone):
 
         This triggers when `MsgID.LOCAL_POSITION` is received and self.local_position contains new data
         """
-        pass
+        if self.flight_state == States.TAKEOFF:
+            # coordinate conversion 
+            altitude = -1.0 * self.local_position[2]
+
+            # check if altitude is within 95% of target
+            if altitude > 0.95 * self.target_position[2]:
+                self.aim_next_waypoint()
+                self.waypoint_transition()
+
+        if self.flight_state == States.WAYPOINT:
+            # if the target position is achieved move to next waypoint
+            if self.target_position_achieved():
+                self.aim_next_waypoint()
+                if self.next_waypoint is None:
+                    # there is no waypoint left. It's time to land 
+                    self.landing_transition()
+                else:
+                    self.waypoint_transition()
 
     def velocity_callback(self):
         """
@@ -49,7 +69,11 @@ class BackyardFlyer(Drone):
 
         This triggers when `MsgID.LOCAL_VELOCITY` is received and self.local_velocity contains new data
         """
-        pass
+        
+        if self.flight_state == States.LANDING:
+            if ((self.global_position[2] - self.global_home[2] < 0.1) and
+            abs(self.local_position[2]) < 0.01):
+                self.disarming_transition()
 
     def state_callback(self):
         """
@@ -57,7 +81,17 @@ class BackyardFlyer(Drone):
 
         This triggers when `MsgID.STATE` is received and self.armed and self.guided contain new data
         """
-        pass
+        
+        if not self.in_mission:
+            return
+        if self.flight_state == States.MANUAL:
+            self.arming_transition()
+        elif self.flight_state == States.ARMING:
+            if self.armed:
+                self.takeoff_transition()
+        elif self.flight_state == States.DISARMING:
+            if not self.armed:
+                self.manual_transition()
 
     def calculate_box(self):
         """TODO: Fill out this method
@@ -66,6 +100,24 @@ class BackyardFlyer(Drone):
         """
 
         return [[10.0, 0.0, 3.0],[10.0, 10.0, 3.0],[0.0, 10.0, 3.0],[0.0, 0.0, 3.0]]
+
+    def target_position_achieved(self):
+        """
+        Figuring out whether the target position is achieved
+        """
+
+        return (abs(-1.0 * self.local_position[2]-self.target_position[2]) < POSTION_DELTA and
+        abs(self.local_position[0]-self.target_position[0]) < POSTION_DELTA and
+        abs(self.local_position[1]-self.target_position[1]) < POSTION_DELTA)
+
+    def aim_next_waypoint(self):
+        """ Fetch the next waypoint from the flight plan
+        """
+
+        if self.all_waypoints:
+            self.next_waypoint = self.all_waypoints.pop()
+        else:
+            self.next_waypoint = None
         
 
     def arming_transition(self):
@@ -107,6 +159,12 @@ class BackyardFlyer(Drone):
         2. Transition to WAYPOINT state
         """
         print("waypoint transition")
+        self.target_position = self.next_waypoint
+        try:
+            self.cmd_position(self.target_position[0],self.target_position[1], self.target_position[2], 0)
+        except:
+            print("Error")
+        self.flight_state = States.WAYPOINT
 
     def landing_transition(self):
         """TODO: Fill out this method
