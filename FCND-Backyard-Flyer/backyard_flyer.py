@@ -1,5 +1,6 @@
 import argparse
 import time
+import math
 from enum import Enum
 
 import numpy as np
@@ -8,7 +9,9 @@ from udacidrone import Drone
 from udacidrone.connection import MavlinkConnection, WebSocketConnection  # noqa: F401
 from udacidrone.messaging import MsgID
 
-POSTION_DELTA = 0.2
+POSTION_DELTA = 0.7
+POSTION_DELTA_LAST_WAYPOINT = 0.15
+ALTITUDE_DELTA = 0.15
 
 class States(Enum):
     MANUAL = 0
@@ -19,7 +22,7 @@ class States(Enum):
     DISARMING = 5
 
 
-class BackyardFlyer(Drone):    
+class BackyardFlyer(Drone):
 
     def __init__(self, connection):
         super().__init__(connection)
@@ -106,9 +109,9 @@ class BackyardFlyer(Drone):
         Figuring out whether the target position is achieved
         """
 
-        return (abs(-1.0 * self.local_position[2]-self.target_position[2]) < POSTION_DELTA and
-        abs(self.local_position[0]-self.target_position[0]) < POSTION_DELTA and
-        abs(self.local_position[1]-self.target_position[1]) < POSTION_DELTA)
+        delta = (POSTION_DELTA if self.all_waypoints else POSTION_DELTA_LAST_WAYPOINT)
+
+        return abs(-1.0 * self.local_position[2]-self.target_position[2]) < ALTITUDE_DELTA and math.hypot((self.local_position[0]-self.target_position[0]), (self.local_position[1]-self.target_position[1])) < delta
 
     def aim_next_waypoint(self):
         """ Fetch the next waypoint from the flight plan
