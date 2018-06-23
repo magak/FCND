@@ -121,6 +121,7 @@ class MotionPlanning(Drone):
 
         # TODO: read lat0, lon0 from colliders into floating point values
         
+        
         # TODO: set home position to (lon0, lat0, 0)
 
         # TODO: retrieve current global position
