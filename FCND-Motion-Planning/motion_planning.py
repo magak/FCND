@@ -45,12 +45,15 @@ class MotionPlanning(Drone):
             if -1.0 * self.local_position[2] > 0.95 * self.target_position[2]:
                 self.waypoint_transition()
         elif self.flight_state == States.WAYPOINT:
-            if np.linalg.norm(self.target_position[0:2] - self.local_position[0:2]) < 1.0:
+            if np.linalg.norm(self.target_position[0:2] - self.local_position[0:2]) < self.get_waypoint_transition_threshold():
                 if len(self.waypoints) > 0:
                     self.waypoint_transition()
                 else:
                     if np.linalg.norm(self.local_velocity[0:2]) < 1.0:
                         self.landing_transition()
+    
+    def get_waypoint_transition_threshold(self):        
+        return 1.0
 
     def velocity_callback(self):
         if self.flight_state == States.LANDING:
@@ -127,10 +130,13 @@ class MotionPlanning(Drone):
         lon0 = float(firstline[1].split()[1])
         
         # TODO: set home position to (lon0, lat0, 0)
+        self.set_home_position(lon0, lat0, 0)
 
         # TODO: retrieve current global position
+        global_position = self.global_position
  
-        # TODO: convert to current local position using global_to_local()
+        # TODO: convert to current local position using global_to_local()        
+        self.local_position = global_to_local(global_position, self.global_home)
         
         print('global home {0}, position {1}, local position {2}'.format(self.global_home, self.global_position,
                                                                          self.local_position))
