@@ -5,10 +5,14 @@ from scipy.spatial import Voronoi
 from bresenham import bresenham
 
 import sys
+import os.path
+import pickle
 import pkg_resources
 pkg_resources.require("networkx==2.1")
 import networkx as nx
 
+TARGET_ALTITUDE = 5
+SAFETY_DISTANCE = 5
 
 def create_grid(data, drone_altitude, safety_distance):
     """
@@ -158,6 +162,8 @@ def a_star(grid, h, start, goal):
         print('**********************')
         print('Failed to find a path!')
         print('**********************') 
+        return None
+
     return path[::-1], path_cost
 
 
@@ -322,8 +328,10 @@ def a_starGraph(graph, h, start, goal):
         path.append(branch[n][1])
     else:
         print('**********************')
-        print('Failed to find a path!')
+        print('Failed to find a path in graph!')
         print('**********************') 
+        return None, None
+
     return path[::-1], path_cost
 
 def closest_point(graph, current_point):
@@ -350,3 +358,49 @@ def GetGraph(edges):
     return G
 
 ###
+
+def GetGridAndOffsets():
+    grid = None
+    north_offset = None
+    east_offset = None
+
+    if os.path.isfile("grid.pickle") and os.path.isfile("north_offset.pickle") and os.path.isfile("east_offset.pickle"):
+        
+        with open('grid.pickle', 'rb') as handle:
+            grid = pickle.load(handle)
+        with open('north_offset.pickle', 'rb') as handle:
+            north_offset = pickle.load(handle)
+        with open('east_offset.pickle', 'rb') as handle:
+            east_offset = pickle.load(handle)
+
+    else:
+        data = np.loadtxt('colliders.csv', delimiter=',', dtype='Float64', skiprows=2)
+        grid, north_offset, east_offset = create_grid(data, TARGET_ALTITUDE, SAFETY_DISTANCE)
+        with open('grid.pickle', 'wb') as handle:
+            pickle.dump(grid, handle)
+        with open('north_offset.pickle', 'wb') as handle:
+            pickle.dump(north_offset, handle)
+        with open('east_offset.pickle', 'wb') as handle:
+            pickle.dump(east_offset, handle)
+    
+    return grid, north_offset, east_offset
+
+def GetLat0Lon0():
+    with open('colliders.csv', "r") as f:
+            firstline = f.readline().split(',')
+
+    return float(firstline[0].split()[1]), float(firstline[1].split()[1])
+
+def GetVoronoyGraph():
+    graph = None
+    if os.path.isfile("graph.pickle"):
+        with open('graph.pickle', 'rb') as handle:
+            graph = pickle.load(handle)
+    else:
+        data = np.loadtxt('colliders.csv', delimiter=',', dtype='Float64', skiprows=2)
+        _, edges = create_grid_and_edges(data, TARGET_ALTITUDE, SAFETY_DISTANCE)
+        graph = GetGraph(edges)
+        with open('graph.pickle', 'wb') as handle:
+            pickle.dump(graph, handle)
+
+    return graph
