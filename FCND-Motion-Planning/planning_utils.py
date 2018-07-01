@@ -186,10 +186,9 @@ def collinearity_check(p1, p2, p3, epsilon=1e-6):
     det = np.linalg.det(m)
     return abs(det) < epsilon
 
-# We're using collinearity here, but you could use Bresenham as well!
+# using collinearity here
 def prune_path(path):
     result = path[:]
-    # TODO: prune the path!
     
     i = 0
     while i < len(result) - 2:
@@ -198,9 +197,7 @@ def prune_path(path):
         p3 = point(result[i+2])
                 
         if collinearity_check(p1, p2, p3):
-            # Something subtle here but we can mutate
-            # `result` freely because the length
-            # of the list is check on every iteration.
+            
             result.remove(result[i+1])
         else:
             i += 1
@@ -248,11 +245,9 @@ def create_grid_and_edges(data, drone_altitude, safety_distance):
             # add center of obstacles to points list
             points.append([north - north_min, east - east_min])
 
-    # TODO: create a voronoi graph based on
     # location of obstacle centres
     graph = Voronoi(points)
-
-    # TODO: check each edge from graph.ridge_vertices for collision
+    
     edges = []
     for v in graph.ridge_vertices:
         p1 = graph.vertices[v[0]]
