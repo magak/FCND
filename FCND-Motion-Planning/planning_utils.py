@@ -11,7 +11,7 @@ import pkg_resources
 pkg_resources.require("networkx==2.1")
 import networkx as nx
 
-TARGET_ALTITUDE = 5
+TARGET_ALTITUDE = 10
 SAFETY_DISTANCE = 5
 
 def create_grid(data, drone_altitude, safety_distance):
@@ -113,10 +113,14 @@ def valid_actions(grid, current_node):
     return valid_actions
 
 
-def a_star(grid, h, start, goal):
+def a_star(grid, start, goal):
 
     path = []
     path_cost = 0
+
+    if(start == goal):
+        return path, path_cost
+
     queue = PriorityQueue()
     queue.put((0, start))
     visited = set(start)
@@ -142,7 +146,7 @@ def a_star(grid, h, start, goal):
                 da = action.delta
                 next_node = (current_node[0] + da[0], current_node[1] + da[1])
                 branch_cost = current_cost + action.cost
-                queue_cost = branch_cost + h(next_node, goal)
+                queue_cost = branch_cost + heuristic(next_node, goal)
                 
                 if next_node not in visited:                
                     visited.add(next_node)               
@@ -170,12 +174,6 @@ def a_star(grid, h, start, goal):
 
 def heuristic(position, goal_position):
     return np.linalg.norm(np.array(position) - np.array(goal_position))
-
-
-
-
-
-
 
 
 ### Cull waypoints Functions
@@ -282,11 +280,15 @@ def create_grid_and_edges(data, drone_altitude, safety_distance):
 
     return grid, edges
 
-def a_starGraph(graph, h, start, goal):
+def a_starGraph(graph, start, goal):
     """Modified A* to work with NetworkX graphs."""
     
     path = []
     path_cost = 0
+
+    if(start == goal):
+        return path, path_cost
+
     queue = PriorityQueue()
     queue.put((0, start))
     visited = set(start)
@@ -310,7 +312,7 @@ def a_starGraph(graph, h, start, goal):
             for next_node in graph[current_node]:
                 cost = graph.edges[current_node, next_node]['weight']
                 branch_cost = current_cost + cost
-                queue_cost = branch_cost + h(next_node, goal)
+                queue_cost = branch_cost + heuristic(next_node, goal)
                 
                 if next_node not in visited:                
                     visited.add(next_node)
