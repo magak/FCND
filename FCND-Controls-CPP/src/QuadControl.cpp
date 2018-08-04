@@ -137,8 +137,8 @@ V3F QuadControl::RollPitchControl(V3F accelCmd, Quaternion<float> attitude, floa
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////  
   float c = collThrustCmd / mass;
-  float r13c = CONSTRAIN(accelCmd[0] / c, -maxTiltAngle, maxTiltAngle);
-  float r23c = CONSTRAIN(accelCmd[1] / c, -maxTiltAngle, maxTiltAngle);
+  float r13c = -CONSTRAIN(accelCmd[0] / c, -maxTiltAngle, maxTiltAngle);
+  float r23c = -CONSTRAIN(accelCmd[1] / c, -maxTiltAngle, maxTiltAngle);
 
   float r13 = R(0, 2);
   float r23 = R(1, 2);
@@ -149,11 +149,11 @@ V3F QuadControl::RollPitchControl(V3F accelCmd, Quaternion<float> attitude, floa
   float r22 = R(1, 1);
   float r12 = R(0, 1);
 
-  float bxDot = kpBank * (r13c - r13);
-  float byDot = kpBank * (r23c - r23);
+  float bxDot = kpBank * (r13 - r13c);
+  float byDot = kpBank * (r23 - r23c);
 
-  pqrCmd[0] = (r21*bxDot - r11 * byDot / r33);
-  pqrCmd[1] = (r22*bxDot - r12 * byDot / r33);
+  pqrCmd[0] = (-r21*bxDot + r11 * byDot) / r33;
+  pqrCmd[1] = (-r22*bxDot + r12 * byDot) / r33;
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
@@ -191,7 +191,7 @@ float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, flo
   float hAccmd = kpVelZ * (hVelcmd - velZ) + accelZCmd;
   float r33 = R(2, 2);
 
-  thrust = mass * (hAccmd - 9.81f) / r33;
+  thrust = -mass * (hAccmd - 9.81f) / r33;
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
   
@@ -229,7 +229,24 @@ V3F QuadControl::LateralPositionControl(V3F posCmd, V3F velCmd, V3F pos, V3F vel
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
 
+  /*pos.z = 0;
+  vel.z = 0;*/
+
+  V3F xyVelcmd = kpPosXY * (posCmd - pos) + velCmd;
+  float xyVelcmdMag = xyVelcmd.magXY();
+  if (xyVelcmdMag > maxSpeedXY) 
+  {
+	  xyVelcmd = xyVelcmd * maxSpeedXY / xyVelcmdMag;
+  }
   
+  V3F xyAccmd = kpVelXY * (xyVelcmd - vel) + accelCmd;
+  float xyAcccmdMag = xyAccmd.magXY();
+  if (xyAcccmdMag > maxAccelXY)
+  {
+	  xyAccmd = xyAccmd * maxAccelXY / xyAcccmdMag;
+  }
+
+  accelCmd = xyAccmd;
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
