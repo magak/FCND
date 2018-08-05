@@ -7,6 +7,7 @@
 #include "Trajectory.h"
 #include "BaseController.h"
 #include "Math/Mat3x3F.h"
+#include "Math/Angles.h"
 
 #ifdef __PX4_NUTTX
 #include <systemlib/param/param.h>
@@ -188,7 +189,9 @@ float QuadControl::AltitudeControl(float posZCmd, float velZCmd, float posZ, flo
   float hVelcmd = kpPosZ * (posZCmd - posZ) + velZCmd;
   hVelcmd = CONSTRAIN(hVelcmd, -maxAscentRate, maxDescentRate);
 
-  float hAccmd = kpVelZ * (hVelcmd - velZ) + accelZCmd;
+  integratedAltitudeError += (posZCmd - posZ)*dt;
+
+  float hAccmd = kpVelZ * (hVelcmd - velZ) + KiPosZ*integratedAltitudeError + accelZCmd;
   float r33 = R(2, 2);
 
   thrust = -mass * (hAccmd - 9.81f) / r33;
@@ -269,6 +272,10 @@ float QuadControl::YawControl(float yawCmd, float yaw)
   float yawRateCmd=0;
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
 
+  float yawCmdNormed = AngleNormF(yawCmd);
+  float yawNormed = AngleNormF(yaw);
+
+  yawRateCmd = kpYaw * (yawCmdNormed - yawNormed);
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
